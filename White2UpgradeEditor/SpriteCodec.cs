@@ -258,7 +258,7 @@ public static class SpriteCodec
         int bestIndex = 1;
         for (int i = 1; i < palette.Length; i++)
         {
-            long dr = color.R - palette[i].R, dg = color.G - palette[i].G, db = color.B - palette[i].B;
+            long dr = color.Red - palette[i].R, dg = color.Green - palette[i].G, db = color.Blue - palette[i].B;
             long distance = dr * dr + dg * dg + db * db;
             if (distance < best) { best = distance; bestIndex = i; }
         }
