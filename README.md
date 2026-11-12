@@ -1,6 +1,6 @@
 # White 2 Upgrade Studio
 
-A desktop ROM editor for **Pokémon White 2 Upgrade**, written in **C# / .NET 8** with **Avalonia UI**.
+A desktop ROM editor for **Pokémon White 2 Upgrade**, written in **C# / .NET 8** with **Avalonia UI**, for Windows and Linux (x86-64 AppImage).
 
 > **Early development / experimental.** This code is a working-source preview, not a verified stable release. Some features use reverse-engineered data layouts that may differ between ROM builds. Back up your ROM before editing. This repository contains **source code only**—no ROMs, extracted game files, or other Nintendo assets.
 
@@ -28,7 +28,7 @@ A desktop ROM editor for **Pokémon White 2 Upgrade**, written in **C# / .NET 8*
 
 ## Requirements
 
-- **Windows 10/11** (the project targets `net8.0-windows` and uses `System.Drawing.Common`).
+- **Windows 10/11 or Linux x86-64**. The editor targets cross-platform `net8.0`, using SkiaSharp for PNG/sprite processing. Linux requires a graphical desktop (X11 or XWayland) and common desktop libraries.
 - [.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) to build from source.
 
 ## Build and run
@@ -50,11 +50,11 @@ dotnet publish .\White2UpgradeUpdater\White2UpgradeUpdater.csproj -c Release -r 
 
 ### GitHub Actions and automatic preview releases
 
-Every push to `main` automatically builds and tests both the editor and updater on Windows. **Only after the build and updater self-tests succeed**, GitHub Actions creates a new numbered GitHub **prerelease** containing `White2UpgradeStudio-win-x64.zip` and `White2UpgradeStudio-win-x64.zip.sha256`. No manual version tags are necessary.
+Every push to `main` automatically builds and tests the Windows editor/updater and the Linux AppImage. **Only after both platforms pass**, GitHub Actions creates a numbered GitHub **prerelease** containing `White2UpgradeStudio-win-x64.zip`, its SHA-256 sidecar, and a `White2UpgradeStudio-v*-x86_64.AppImage`. No manual version tags are necessary.
 
 A preview tag looks like `v0.2.7-alpha.1`, with a version counter increasing for each workflow run; both applications are stamped with that version so the updater recognizes new releases. A push containing multiple commits produces one release for the resulting `main` head, rather than a separate release for each individual commit. Failed builds do not create releases. Pull requests receive validation builds but do not publish releases.
 
-See the repository's [Releases](https://github.com/PokeVibeEdit/White2UpgradeStudio/releases) page for installable preview builds, and the [Actions](https://github.com/PokeVibeEdit/White2UpgradeStudio/actions) tab for build logs and artifacts. Releases are experimental, not stable.
+See the repository's [Releases](https://github.com/PokeVibeEdit/White2UpgradeStudio/releases) page for Windows downloads and Linux AppImages, and the [Actions](https://github.com/PokeVibeEdit/White2UpgradeStudio/actions) tab for build logs and artifacts. Releases are experimental, not stable.
 
 ## Updates
 
@@ -81,6 +81,27 @@ public API without the CLI. No personal access token is stored by the updater.
 **Publishing updates:** Simply commit your changes and push to `main` (or merge a pull request into `main`). The automated release workflow builds, tests, versions, and publishes a prerelease, including the updater-compatible checksum. Creating or pushing tags manually is no longer required.
 
 Checksums detect corrupted downloads or changed bytes in transit; they are not a substitute for cryptographic release signing. The updater still requires user confirmation to install an available update.
+
+## Linux AppImage
+
+Download `White2UpgradeStudio-v*-x86_64.AppImage` from [GitHub Releases](https://github.com/PokeVibeEdit/White2UpgradeStudio/releases). On a Linux x86-64 desktop:
+
+```bash
+chmod +x White2UpgradeStudio-v*-x86_64.AppImage
+./White2UpgradeStudio-v*-x86_64.AppImage
+```
+
+If your Linux distribution lacks FUSE, you can try `APPIMAGE_EXTRACT_AND_RUN=1 ./White2UpgradeStudio-v*-x86_64.AppImage`. The AppImage bundles the .NET runtime, but requires common Linux graphical libraries. It has not been validated on every distribution.
+
+**Updating on Linux:** The sidebar button opens GitHub Releases. Download a newer AppImage and replace your old AppImage manually. The Windows updater does **not** modify AppImages.
+
+To build the AppImage from source (requires Linux, .NET 8 SDK, `curl`, and `rsvg-convert` from `librsvg2-bin`):
+
+```bash
+bash scripts/build-appimage.sh 0.2.0-alpha.1
+```
+
+Linux CI builds and smoke-tests the AppImage under Xvfb. Do not distribute ROMs or ROM assets alongside the editor.
 
 ## Open and save safely
 
