@@ -16,6 +16,7 @@ A desktop ROM editor for **Pokémon White 2 Upgrade**, written in **C# / .NET 8*
 | **Maps + Events** | Edit existing NPC/sign/warp/trigger records; experimental 3D event positioning viewer and read-only NSBMD-style geometry wireframe preview |
 | **Misc sprites** | Raw NARC resource browser with size-checked import/export (not a visual overworld sprite editor) |
 | **ROM files** | NitroFS browser with a hexadecimal preview |
+| **xdelta export** | Export verified xdelta/VCDIFF patches for edited .nds ROMs or matching extracted dumps (requires external xdelta3.exe) |
 
 ### Not yet supported
 
@@ -93,6 +94,31 @@ Checksums detect corrupted downloads or changed bytes in transit; they are not a
 **Direct `.nds` mode:** replaces files only when the rebuilt NARC is the **same byte size**. If the change alters archive size, the app refuses direct-ROM saving; use dump/patch mode and an appropriate ROM file reinsertion workflow instead.
 
 Always keep an untouched backup and test modifications on a copy.
+
+## Export a shareable xdelta patch
+
+Instead of distributing a copyrighted edited ROM, you can export a standard **xdelta3/VCDIFF** patch containing your changes.
+
+1. Open an original **.nds** file and edit its resources, or open a dump extracted from the ROM you intend to patch.
+2. Click **Export xdelta patch** next to **Save changes**. From an extracted dump, choose the corresponding untouched original `.nds` first.
+3. The first time, select a trusted copy of **xdelta3.exe** if it isn't next to the editor or available on your `PATH`.
+4. Choose a `.xdelta` output path. The editor builds a temporary modified ROM, runs xdelta3, then decodes the patch and checks that it exactly recreates the edited ROM before saving the patch.
+
+The xdelta3 program is **not bundled** with this repository or releases. Obtain it independently from a trusted source. For example, the xdelta3 command line can apply a patch with:
+
+```powershell
+xdelta3.exe -d -s .\original.nds .\White2Upgrade-changes.xdelta .\patched.nds
+```
+
+**Compatibility and safety:**
+
+- The patch is specific to the exact base ROM used when generating it. Recipients must provide that same unmodified ROM revision.
+- When editing an extracted dump, the tool confirms the modified source NARCs match the selected base ROM before patching.
+- **Only same-size NARC replacements are supported**. If an edit changes a resource's ROM file length, export refuses; this program does not yet repack variable-sized NitroFS archives.
+- Patching doesn't change the original ROM, clear unsaved edits, or include an entire ROM in the final patch file.
+- A temporary full edited ROM is created locally and removed after encoding. Make sure you have sufficient free disk space.
+- The tool verifies that xdelta3 can decode the patch back to exactly the edited ROM and rejects unverified output. The original ROM is not overwritten.
+- The tool produces `.xdelta` patches, **not UPS, IPS, BPS, or ROM files**.
 
 ## Where names come from
 
