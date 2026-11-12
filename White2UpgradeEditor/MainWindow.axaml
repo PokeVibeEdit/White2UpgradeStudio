@@ -16,7 +16,8 @@
         <StackPanel Grid.Row="3" Spacing="8">
           <Border Height="1" Background="#202D40" Margin="0,0,0,8"/>
           <TextBlock Text="WHITE 2 UPGRADE" FontSize="11" Foreground="#AAB5C7"/>
-          <TextBlock Text="Independent editor · v4 preview" FontSize="10" Foreground="#65748B"/>
+          <TextBlock Text="Independent editor · alpha" FontSize="10" Foreground="#65748B"/>
+          <Button x:Name="CheckUpdatesButton" Content="Check for updates" Margin="0,10,0,0"/>
         </StackPanel>
       </Grid>
     </Border>
