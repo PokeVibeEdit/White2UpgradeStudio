@@ -119,6 +119,84 @@ public sealed class RomWorkspace
         foreach (var pair in dirty) pair.Value.MarkSaved();
     }
 
+    /// <summary>
+    /// The original source ROM path when a .nds workspace is open. Extracted dumps
+    /// require the user to select their own matching base ROM for xdelta export.
+    /// </summary>
+    public string? OpenedRomPath => _rom?.FilePath;
+
+    /// <summary>
+    /// Write a temporary complete .nds image for xdelta encoding without modifying
+    /// the live workspace or clearing its unsaved-change flags.
+    /// </summary>
+    public void WriteRomSnapshot(string target, string sourceRomPath)
+    {
+        string inputPath = Path.GetFullPath(sourceRomPath);
+        string outputPath = Path.GetFullPath(target);
+        if (string.Equals(inputPath, outputPath, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("The original ROM cannot be used as the temporary output.");
+
+        NdsRom baseRom;
+        if (_rom is not null)
+        {
+            if (!string.Equals(inputPath, Path.GetFullPath(_rom.FilePath), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The selected source ROM must be the .nds originally opened in the editor.");
+            if (!_rom.OriginalFileMatchesDisk())
+                throw new InvalidOperationException("The source .nds file was changed or replaced since it was opened. Reopen the ROM before exporting an xdelta patch.");
+            baseRom = _rom;
+        }
+        else
+        {
+            if (DirtyArchiveCount == 0)
+                throw new InvalidOperationException("No edited archives are available to patch. Apply an edit first.");
+            baseRom = new NdsRom();
+            baseRom.Open(inputPath);
+        }
+
+        // Build and validate everything before creating a target file. No in-memory
+        // archive is changed and no MarkSaved() call happens during patch export.
+        var replacements = new List<(RomFile File, byte[] Bytes)>();
+        foreach (var pair in _archives.Where(x => x.Value.IsDirty))
+        {
+            RomFile file = baseRom.FindFile(pair.Key);
+            byte[] updated = pair.Value.Build();
+            if (updated.Length != file.Length)
+                throw new InvalidOperationException(
+                    $"Archive '{pair.Key}' changes size ({file.Length:N0} to {updated.Length:N0} bytes). " +
+                    "This editor cannot reinsert size-changing NARC archives into an NDS ROM yet. No xdelta was generated.");
+
+            if (_folderRoot is not null)
+            {
+                string relative = (_folderHasDataPrefix ? "data/" : "") + pair.Key;
+                string sourceFile = Path.Combine(_folderRoot, relative.Replace('/', Path.DirectorySeparatorChar));
+                // A base .nds must match the original extracted file being edited;
+                // otherwise a different game revision could silently be patched.
+                if (!File.ReadAllBytes(sourceFile).AsSpan().SequenceEqual(baseRom.ReadFile(file)))
+                    throw new InvalidOperationException(
+                        $"The selected base ROM does not match extracted archive '{pair.Key}'. " +
+                        "Select the same ROM revision from which your dump was extracted.");
+            }
+            replacements.Add((file, updated));
+        }
+
+        try
+        {
+            baseRom.SaveAs(outputPath);
+            using var stream = new FileStream(outputPath, FileMode.Open, FileAccess.Write, FileShare.None);
+            foreach (var replacement in replacements)
+            {
+                stream.Position = replacement.File.Start;
+                stream.Write(replacement.Bytes);
+            }
+            stream.Flush(flushToDisk: true);
+        }
+        catch
+        {
+            try { File.Delete(outputPath); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            throw;
+        }
+    }
+
     public IReadOnlyList<string> ListFiles()
     {
         if (_folderRoot is not null)
