@@ -1,6 +1,5 @@
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
+using SkiaSharp;
 
 namespace White2UpgradeEditor;
 
@@ -194,7 +193,7 @@ public static class SpriteCodec
         return RecompressLike(original, raw);
     }
 
-    public static Bitmap DecodeSingleCellSprite(byte[] blob, Color[] palette)
+    public static SKBitmap DecodeSingleCellSprite(byte[] blob, Color[] palette)
     {
         byte[] raw = Decompress(blob);
         if (raw.Length < 48 || !raw.AsSpan(0, 4).SequenceEqual("RGCN"u8) ||
@@ -210,7 +209,7 @@ public static class SpriteCodec
 
         byte[] chars = raw.AsSpan(48, size).ToArray();
         byte[] tiled = ReorderSingleCell(chars, reverse: false);
-        var bmp = new Bitmap(96, 96, PixelFormat.Format32bppArgb);
+        var bmp = new SKBitmap(96, 96, SKColorType.Bgra8888, SKAlphaType.Premul);
         int cursor = 0;
         for (int ty = 0; ty < 96; ty += 8)
         for (int tx = 0; tx < 96; tx += 8)
@@ -224,7 +223,7 @@ public static class SpriteCodec
         return bmp;
     }
 
-    public static byte[] PatchSingleCellSprite(byte[] original, Bitmap bitmap, Color[] palette)
+    public static byte[] PatchSingleCellSprite(byte[] original, SKBitmap bitmap, Color[] palette)
     {
         if (bitmap.Width != 96 || bitmap.Height != 96)
             throw new InvalidOperationException("Pokémon single-cell sprites must be exactly 96x96 pixels.");
@@ -252,9 +251,9 @@ public static class SpriteCodec
         return RecompressLike(original, raw);
     }
 
-    private static int NearestPaletteIndex(Color color, Color[] palette)
+    private static int NearestPaletteIndex(SKColor color, Color[] palette)
     {
-        if (color.A < 128) return 0;
+        if (color.Alpha < 128) return 0;
         long best = long.MaxValue;
         int bestIndex = 1;
         for (int i = 1; i < palette.Length; i++)
@@ -266,10 +265,14 @@ public static class SpriteCodec
         return bestIndex;
     }
 
-    private static void SetPixel(Bitmap bmp, int x, int y, int index, Color[] palette)
+    private static void SetPixel(SKBitmap bmp, int x, int y, int index, Color[] palette)
     {
-        if (index == 0) bmp.SetPixel(x, y, Color.Transparent);
-        else bmp.SetPixel(x, y, palette[Math.Min(index, palette.Length - 1)]);
+        if (index == 0) bmp.SetPixel(x, y, SKColors.Transparent);
+        else
+        {
+            Color color = palette[Math.Min(index, palette.Length - 1)];
+            bmp.SetPixel(x, y, new SKColor(color.R, color.G, color.B, color.A));
+        }
     }
 
     private static byte[] ReorderSingleCell(byte[] chars, bool reverse)
