@@ -10,7 +10,8 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
-using GdiBitmap = System.Drawing.Bitmap;
+using GdiBitmap = SkiaSharp.SKBitmap;
+using SkiaSharp;
 using GdiColor = System.Drawing.Color;
 
 namespace White2UpgradeEditor;
@@ -44,9 +45,30 @@ public sealed partial class MainWindow : Window
         this.FindControl<Button>("OpenDumpButton")!.Click += async (_, _) => await OpenDumpAsync();
         this.FindControl<Button>("OpenRomButton")!.Click += async (_, _) => await OpenRomAsync();
         _save.Click += async (_, _) => await SaveAsync();
-        this.FindControl<Button>("CheckUpdatesButton")!.Click += (_, _) => OpenUpdater();
+        this.FindControl<Button>("CheckUpdatesButton")!.Click += (_, _) =>
+        {
+            if (OperatingSystem.IsLinux()) OpenLinuxReleases();
+            else OpenUpdater();
+        };
+        if (OperatingSystem.IsLinux())
+            this.FindControl<Button>("CheckUpdatesButton")!.Content = "Download Linux updates";
         BuildNavigation();
         ShowPage("Overview");
+    }
+
+    private void OpenLinuxReleases()
+    {
+        // AppImages are mounted read-only. Never invoke the Windows file-replacement
+        // updater on Linux; AppImage updates are downloaded and installed manually.
+        try
+        {
+            const string releases = "https://github.com/PokeVibeEdit/White2UpgradeStudio/releases";
+            var start = new ProcessStartInfo("xdg-open") { UseShellExecute = false, CreateNoWindow = true };
+            start.ArgumentList.Add(releases);
+            Process.Start(start);
+            SetStatus("Linux releases opened. Download a newer AppImage and replace the old file after closing the app.");
+        }
+        catch (Exception ex) { SetStatus("Open GitHub Releases in your browser to download a Linux AppImage: " + ex.Message); }
     }
 
     private void OpenUpdater()
@@ -515,10 +537,10 @@ public sealed partial class MainWindow : Window
         var battle=_workspace!.GetArchive("a/0/0/4");
         var species=NewBox("Species ID");species.Text=_selectedPokemonId.ToString();var side=new ComboBox{ItemsSource=new[]{"Front","Back"},SelectedIndex=0,Width=110};var female=new CheckBox{Content="Female"};var shiny=new CheckBox{Content="Shiny palette"};
         var preview=new Image{Width=384,Height=384,Stretch=Stretch.Uniform};var palette=new ListBox{MinWidth=190,MaxHeight=330};var colorBox=NewBox("#RRGGBB");var note=Muted("Choose a sprite to preview.");GdiBitmap? bitmap=null;GdiColor[]? colors=null;int spriteMember=0,paletteMember=0;
-        void Load(){try{int id=(int)Parse(species.Text,721);int slot=(side.SelectedIndex==0?(female.IsChecked==true?1:0):(female.IsChecked==true?10:9));spriteMember=id*20+slot;paletteMember=id*20+(shiny.IsChecked==true?19:18);byte[] blob=battle.GetMember(spriteMember);if(blob.Length==0&&female.IsChecked==true){female.IsChecked=false;return;}colors=SpriteCodec.ReadPalette(battle.GetMember(paletteMember));bitmap?.Dispose();bitmap=SpriteCodec.DecodeSingleCellSprite(blob,colors);using var ms=new MemoryStream();bitmap.Save(ms,System.Drawing.Imaging.ImageFormat.Png);ms.Position=0;preview.Source=new Bitmap(ms);palette.ItemsSource=colors.Select((c,i)=>$"#{i:D2}  {c.R:X2}{c.G:X2}{c.B:X2}").ToList();palette.SelectedIndex=0;note.Text=$"{SpeciesName(id)} (#{id:000}) · {side.SelectedItem} · 96×96 · sprite member {spriteMember} · palette member {paletteMember}";}catch(Exception ex){preview.Source=null;note.Text="Sprite unavailable: "+ex.Message;}}
+        void Load(){try{int id=(int)Parse(species.Text,721);int slot=(side.SelectedIndex==0?(female.IsChecked==true?1:0):(female.IsChecked==true?10:9));spriteMember=id*20+slot;paletteMember=id*20+(shiny.IsChecked==true?19:18);byte[] blob=battle.GetMember(spriteMember);if(blob.Length==0&&female.IsChecked==true){female.IsChecked=false;return;}colors=SpriteCodec.ReadPalette(battle.GetMember(paletteMember));bitmap?.Dispose();bitmap=SpriteCodec.DecodeSingleCellSprite(blob,colors);using var image=SKImage.FromBitmap(bitmap);using var png=image.Encode(SKEncodedImageFormat.Png,100);using var ms=new MemoryStream(png.ToArray());preview.Source=new Bitmap(ms);palette.ItemsSource=colors.Select((c,i)=>$"#{i:D2}  {c.R:X2}{c.G:X2}{c.B:X2}").ToList();palette.SelectedIndex=0;note.Text=$"{SpeciesName(id)} (#{id:000}) · {side.SelectedItem} · 96×96 · sprite member {spriteMember} · palette member {paletteMember}";}catch(Exception ex){preview.Source=null;note.Text="Sprite unavailable: "+ex.Message;}}
         species.LostFocus+=(_,_)=>Load();side.SelectionChanged+=(_,_)=>Load();female.PropertyChanged+=(_,e)=>{if(e.Property==CheckBox.IsCheckedProperty)Load();};shiny.PropertyChanged+=(_,e)=>{if(e.Property==CheckBox.IsCheckedProperty)Load();};palette.SelectionChanged+=(_,_)=>{if(colors!=null&&palette.SelectedIndex>=0){var c=colors[palette.SelectedIndex];colorBox.Text=$"#{c.R:X2}{c.G:X2}{c.B:X2}";}};
-        var import= new Button{Content="Import PNG"};import.Click+=async(_,_)=>{try{var files=await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions{Title="Import 96×96 sprite PNG",AllowMultiple=false,FileTypeFilter=[new FilePickerFileType("PNG image"){Patterns=["*.png"]}]});if(files.Count==0||colors==null)return;await using var stream=await files[0].OpenReadAsync();using var source=new GdiBitmap(stream);var changed=SpriteCodec.PatchSingleCellSprite(battle.GetMember(spriteMember),source,colors);battle.SetMember(spriteMember,changed);Load();note.Text="PNG imported in memory. Save a patch or new ROM to write it.";}catch(Exception ex){note.Text=ex.Message;}};
-        var export=new Button{Content="Export PNG"};export.Click+=async(_,_)=>{try{if(bitmap==null)return;var file=await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions{Title="Export sprite PNG",SuggestedFileName=$"species-{species.Text}-{side.SelectedItem}.png",FileTypeChoices=[new FilePickerFileType("PNG image"){Patterns=["*.png"]}]});if(file==null)return;await using var stream=await file.OpenWriteAsync();bitmap.Save(stream,System.Drawing.Imaging.ImageFormat.Png);note.Text="Sprite exported.";}catch(Exception ex){note.Text=ex.Message;}};
+        var import= new Button{Content="Import PNG"};import.Click+=async(_,_)=>{try{var files=await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions{Title="Import 96×96 sprite PNG",AllowMultiple=false,FileTypeFilter=[new FilePickerFileType("PNG image"){Patterns=["*.png"]}]});if(files.Count==0||colors==null)return;await using var stream=await files[0].OpenReadAsync();using var source=GdiBitmap.Decode(stream) ?? throw new InvalidDataException("Invalid or unsupported sprite PNG.");var changed=SpriteCodec.PatchSingleCellSprite(battle.GetMember(spriteMember),source,colors);battle.SetMember(spriteMember,changed);Load();note.Text="PNG imported in memory. Save a patch or new ROM to write it.";}catch(Exception ex){note.Text=ex.Message;}};
+        var export=new Button{Content="Export PNG"};export.Click+=async(_,_)=>{try{if(bitmap==null)return;var file=await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions{Title="Export sprite PNG",SuggestedFileName=$"species-{species.Text}-{side.SelectedItem}.png",FileTypeChoices=[new FilePickerFileType("PNG image"){Patterns=["*.png"]}]});if(file==null)return;await using var stream=await file.OpenWriteAsync();using var image=SKImage.FromBitmap(bitmap);using var png=image.Encode(SKEncodedImageFormat.Png,100);png.SaveTo(stream);note.Text="Sprite exported.";}catch(Exception ex){note.Text=ex.Message;}};
         var applyColor=new Button{Content="Apply palette color"};applyColor.Click+=(_,_)=>{try{if(colors==null||palette.SelectedIndex<0) return;string hex=(colorBox.Text??"").Trim().TrimStart('#');if(hex.Length!=6)throw new FormatException("Enter a six-digit RGB hex value.");var c=GdiColor.FromArgb(Convert.ToInt32(hex,16));colors[palette.SelectedIndex]=c;battle.SetMember(paletteMember,SpriteCodec.PatchPalette(battle.GetMember(paletteMember),colors));Load();palette.SelectedIndex=Math.Min(palette.SelectedIndex,colors.Length-1);note.Text="Palette color changed in memory.";}catch(Exception ex){note.Text=ex.Message;}};
         var importPalette = new Button{Content="Import Frost palette"};
         importPalette.Click += async (_,_) =>
@@ -615,9 +637,14 @@ public sealed partial class MainWindow : Window
             {
                 var executables = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
-                    Title = "Locate xdelta3.exe (required for standard xdelta/VCDIFF patches)",
+                    Title = OperatingSystem.IsLinux()
+                        ? "Locate xdelta3 (install the xdelta3 package if unavailable)"
+                        : "Locate xdelta3.exe (required for standard xdelta/VCDIFF patches)",
                     AllowMultiple = false,
-                    FileTypeFilter = [new FilePickerFileType("xdelta3 executable") { Patterns = ["xdelta3.exe", "*.exe"] }]
+                    FileTypeFilter = [new FilePickerFileType("xdelta3 executable")
+                    {
+                        Patterns = OperatingSystem.IsLinux() ? new[] { "*" } : new[] { "xdelta3.exe", "*.exe" }
+                    }]
                 });
                 if (executables.Count == 0) return;
                 xdelta = executables[0].Path.LocalPath;

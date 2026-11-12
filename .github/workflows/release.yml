@@ -17,7 +17,50 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  appimage:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install AppImage dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y librsvg2-bin xvfb libx11-6 libxrandr2 libxi6 libgl1 libfontconfig1 libfreetype6
+
+      - name: Build Linux x64 AppImage
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ format('0.2.{0}-alpha.1', github.run_number) }}
+        run: bash scripts/build-appimage.sh "$RELEASE_VERSION"
+
+      - name: Smoke-test Linux GUI
+        shell: bash
+        run: |
+          set +e
+          xvfb-run -a timeout 12s env APPIMAGE_EXTRACT_AND_RUN=1 ./dist/*.AppImage >/tmp/w2u-appimage-smoke.log 2>&1
+          rc=$?
+          set -e
+          cat /tmp/w2u-appimage-smoke.log
+          if [ "$rc" -ne 124 ]; then
+            echo "AppImage exited unexpectedly: $rc"
+            exit 1
+          fi
+
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64-appimage
+          path: dist/*.AppImage
+          if-no-files-found: error
+
   release:
+    needs: appimage
     runs-on: windows-latest
     steps:
       - name: Checkout source
@@ -66,6 +109,12 @@ jobs:
           $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           [System.IO.File]::WriteAllText((Join-Path (Get-Location) "$zip.sha256"), "$hash  $zip")
 
+      - name: Download tested Linux AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-x86_64-appimage
+          path: linux-release
+
       - name: Publish GitHub prerelease
         uses: softprops/action-gh-release@v2
         with:
@@ -78,3 +127,4 @@ jobs:
           files: |
             White2UpgradeStudio-win-x64.zip
             White2UpgradeStudio-win-x64.zip.sha256
+            linux-release/*.AppImage

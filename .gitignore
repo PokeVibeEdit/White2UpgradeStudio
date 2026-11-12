@@ -12,6 +12,10 @@ TestResults/
 coverage/
 artifacts/
 publish/
+# AppImage build work directories and generated binaries
+/.appimage-build/
+/dist/
+*.AppImage
 
 # Local ROMs, extracted ROM content and game assets
 *.nds
