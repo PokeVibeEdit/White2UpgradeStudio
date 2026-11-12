@@ -105,7 +105,8 @@ public sealed partial class MainWindow : Window
         var entries = new (string Icon, string Name)[]
         {
             ("⌂", "Overview"), ("◈", "Pokémon"),
-            ("♟", "Trainers"), ("▦", "Maps + Events"), ("✦", "Starters + Rival"), ("▧", "Misc Sprites"), ("▤", "ROM Files")
+            ("♟", "Trainers"), ("▦", "Maps + Events"), ("✦", "Starters + Rival"),
+            ("✧", "Starter Screen"), ("⌗", "Type Matchups"), ("▧", "Misc Sprites"), ("▤", "ROM Files")
         };
         foreach (var (icon, name) in entries)
         {
@@ -132,6 +133,8 @@ public sealed partial class MainWindow : Window
             "Starters + Rival" => _workspace is null ? BuildLocked("Starter and rival data") : BuildStarterPage(),
             "Misc Sprites" => _workspace is null ? BuildLocked("Miscellaneous sprite resources") : BuildMiscSpritePage(),
             "ROM Files" => _workspace is null ? BuildLocked("NitroFS browser") : BuildFilesPage(),
+            "Type Matchups" => _workspace is null ? BuildLocked("Type chart") : BuildTypeChartPage(),
+            "Starter Screen" => _workspace is null ? BuildLocked("Starter menu") : BuildStarterScreenPage(),
             _ => BuildOverview()
         };
     }
@@ -141,8 +144,8 @@ public sealed partial class MainWindow : Window
         var root = new StackPanel { Spacing = 18 };
         var hero = Card(new StackPanel { Spacing = 10, Children =
         {
-            new TextBlock { Text = "A focused workspace for White 2 Upgrade", FontSize = 26, FontWeight = FontWeight.Bold, Foreground = Brush("#F4F7FC") },
-            new TextBlock { Text = "Edit expanded Gen V data with archive-aware tools, clear validation and a safer save workflow.", FontSize = 13, Foreground = Brush("#98A7BC"), TextWrapping = TextWrapping.Wrap },
+            new TextBlock { Text = "WHITE 2 UPGRADE ONLY · ROM editor", FontSize = 26, FontWeight = FontWeight.Bold, Foreground = Brush("#F4F7FC") },
+            new TextBlock { Text = "For Pokémon White 2 Upgrade only — not vanilla White 2, Black 2, or other ROM hacks. ROMs are checked for compatibility and battle type effectiveness on open.", FontSize = 13, Foreground = Brush("#98A7BC"), TextWrapping = TextWrapping.Wrap },
             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children =
             {
                 PrimaryButton("Open extracted dump", async () => await OpenDumpAsync()),
@@ -212,17 +215,31 @@ public sealed partial class MainWindow : Window
 
         var bindings = BuildPersonalBindings();
         var editors = new Dictionary<string, TextBox>();
+        var typePickers = new Dictionary<string, ComboBox>();
         var fieldStack = new StackPanel { Spacing = 7 };
         foreach (var b in bindings)
         {
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("250,*"), ColumnSpacing = 10 };
             row.Children.Add(new TextBlock { Text = b.Name, VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Foreground = Brush("#AAB7CA") });
-            var input = new TextBox { Text = "0", MinWidth = 150 };
-            Grid.SetColumn(input, 1); row.Children.Add(input); fieldStack.Children.Add(row); editors[b.Name] = input;
+            if (b.Name is "Type 1 ID" or "Type 2 ID")
+            {
+                var names = TypeChartEngine.Types.Select((name, id) => $"{id:00} · {name}").ToArray();
+                var select = new ComboBox { ItemsSource = names, SelectedIndex = 0, MinWidth = 150 };
+                Grid.SetColumn(select, 1); row.Children.Add(select); fieldStack.Children.Add(row);
+                typePickers[b.Name] = select;
+            }
+            else
+            {
+                var input = new TextBox { Text = "0", MinWidth = 150 };
+                Grid.SetColumn(input, 1); row.Children.Add(input); fieldStack.Children.Add(row);
+                editors[b.Name] = input;
+            }
         }
         var info = Muted("Select a species to inspect its personal data.");
         int currentId = _selectedPokemonId; bool formDirty = false; bool restoringSelection = false;
         foreach (var input in editors.Values) input.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) { formDirty = true; info.Text = "Unsaved form edits · apply or discard before switching species."; } };
+        foreach (var picker in typePickers.Values) picker.SelectionChanged += (_, _) =>
+        { formDirty = true; info.Text = "Unsaved type edit · apply before switching species."; };
         var apply = PrimaryButton("Apply Pokémon changes", () =>
         {
             if (list.SelectedItem is not string selected) return;
@@ -230,7 +247,13 @@ public sealed partial class MainWindow : Window
             {
                 int id = int.Parse(selected.AsSpan(1, 3), CultureInfo.InvariantCulture);
                 byte[] data = archive.GetMember(id).ToArray();
-                foreach (var b in bindings) b.Set(data, editors[b.Name].Text ?? "0");
+                foreach (var b in bindings)
+                {
+                    string value = typePickers.TryGetValue(b.Name, out var picker)
+                        ? picker.SelectedIndex.ToString(CultureInfo.InvariantCulture)
+                        : editors[b.Name].Text ?? "0";
+                    b.Set(data, value);
+                }
                 archive.SetMember(id, data); currentId = id; formDirty = false; info.Text = $"Applied {SpeciesName(id)} (#{id:000}) in memory · personal record 0x4C bytes"; SetStatus($"Pokémon #{id:000} changed in memory");
             }
             catch (Exception ex) { info.Text = "Could not apply: " + ex.Message; }
@@ -244,7 +267,16 @@ public sealed partial class MainWindow : Window
                 if (formDirty && id != currentId) { restoringSelection = true; list.SelectedItem = species.FirstOrDefault(x => x.StartsWith($"#{currentId:000}", StringComparison.Ordinal)); restoringSelection = false; info.Text = "Apply the current form edits before selecting another species."; return; }
                 byte[] data = archive.GetMember(id);
                 if (data.Length != 76) throw new InvalidDataException($"Record length {data.Length}; expected 76.");
-                foreach (var b in bindings) editors[b.Name].Text = b.Get(data);
+                foreach (var b in bindings)
+                {
+                    if (typePickers.TryGetValue(b.Name, out var picker))
+                    {
+                        int typeId = int.Parse(b.Get(data), CultureInfo.InvariantCulture);
+                        if (typeId is < 0 or > 17) throw new InvalidDataException($"Unrecognized type ID {typeId} on {b.Name}.");
+                        picker.SelectedIndex = typeId;
+                    }
+                    else editors[b.Name].Text = b.Get(data);
+                }
                 _selectedPokemonId = id; currentId = id; formDirty = false; info.Text = $"{SpeciesName(id)} (#{id:000}) · Personal data record · 76 bytes";
             }
             catch (Exception ex) { info.Text = ex.Message; }
@@ -599,14 +631,36 @@ public sealed partial class MainWindow : Window
 
     private async Task OpenDumpAsync()
     {
-        try{var folders=await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions{Title="Select extracted White 2 Upgrade dump",AllowMultiple=false});if(folders.Count==0)return;_workspace=RomWorkspace.OpenFolder(folders[0].Path.LocalPath);_save.IsEnabled=true;_exportXdelta.IsEnabled=true;SetStatus(_workspace.Description+" · Save As writes only changed archives to a patch folder.");ShowPage("Overview");}
-        catch(Exception ex){SetStatus("Could not open dump: "+ex.Message);}
+        try
+        {
+            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "WHITE 2 UPGRADE ONLY — select extracted ROM dump", AllowMultiple = false
+            });
+            if (folders.Count == 0) return;
+            string source = folders[0].Path.LocalPath;
+            await LoadValidatedWorkspaceAsync(RomWorkspace.OpenFolder(source), source, extracted: true);
+        }
+        catch (Exception ex) { SetStatus("Could not open White 2 Upgrade dump: " + ex.Message); }
     }
+
     private async Task OpenRomAsync()
     {
-        try{var files=await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions{Title="Open Nintendo DS ROM",AllowMultiple=false,FileTypeFilter=[new FilePickerFileType("Nintendo DS ROM"){Patterns=["*.nds"]}]});if(files.Count==0)return;_workspace=RomWorkspace.OpenRom(files[0].Path.LocalPath);_save.IsEnabled=true;_exportXdelta.IsEnabled=true;SetStatus(_workspace.Description+" · Direct ROM save requires same-size archive replacements.");ShowPage("Overview");}
-        catch(Exception ex){SetStatus("Could not open ROM: "+ex.Message);}
+        try
+        {
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "WHITE 2 UPGRADE ONLY — select a .nds ROM",
+                AllowMultiple = false,
+                FileTypeFilter = [new FilePickerFileType("Nintendo DS ROM") { Patterns = ["*.nds"] }]
+            });
+            if (files.Count == 0) return;
+            string source = files[0].Path.LocalPath;
+            await LoadValidatedWorkspaceAsync(RomWorkspace.OpenRom(source), source, extracted: false);
+        }
+        catch (Exception ex) { SetStatus("Could not open White 2 Upgrade ROM: " + ex.Message); }
     }
+
     private async Task ExportXdeltaAsync()
     {
         if (_workspace is null) return;
