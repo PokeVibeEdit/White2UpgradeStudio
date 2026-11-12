@@ -11,14 +11,16 @@ internal static class XdeltaPatchExporter
 {
     internal static string? FindExecutable()
     {
-        string local = Path.Combine(AppContext.BaseDirectory, "xdelta3.exe");
+        // Windows ships xdelta3.exe; Linux package managers usually install /usr/bin/xdelta3.
+        string executableName = OperatingSystem.IsWindows() ? "xdelta3.exe" : "xdelta3";
+        string local = Path.Combine(AppContext.BaseDirectory, executableName);
         if (File.Exists(local)) return local;
         foreach (string directory in (Environment.GetEnvironmentVariable("PATH") ?? "")
                      .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
         {
             try
             {
-                string candidate = Path.Combine(directory.Trim().Trim('"'), "xdelta3.exe");
+                string candidate = Path.Combine(directory.Trim().Trim('"'), executableName);
                 if (File.Exists(candidate)) return candidate;
             }
             catch (ArgumentException) { /* Ignore malformed PATH entries. */ }
@@ -30,7 +32,7 @@ internal static class XdeltaPatchExporter
         string outputPatchPath, string xdeltaExecutable)
     {
         if (!File.Exists(xdeltaExecutable))
-            throw new FileNotFoundException("xdelta3.exe could not be found. Select the xdelta3 command-line executable.", xdeltaExecutable);
+            throw new FileNotFoundException("xdelta3 executable could not be found. Install xdelta3 or select its command-line executable.", xdeltaExecutable);
 
         string source = Path.GetFullPath(sourceRomPath);
         string output = Path.GetFullPath(outputPatchPath);
@@ -109,11 +111,11 @@ internal static class XdeltaPatchExporter
         try
         {
             if (!process.Start())
-                throw new InvalidOperationException("Could not start xdelta3.exe.");
+                throw new InvalidOperationException("Could not start xdelta3.");
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
-            throw new InvalidOperationException("Could not run xdelta3.exe. Select a valid Windows xdelta3 executable. " + ex.Message, ex);
+            throw new InvalidOperationException("Could not run xdelta3. Select a compatible executable for your operating system. " + ex.Message, ex);
         }
 
         Task<string> stdout = process.StandardOutput.ReadToEndAsync();

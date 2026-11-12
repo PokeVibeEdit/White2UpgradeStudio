@@ -637,9 +637,14 @@ public sealed partial class MainWindow : Window
             {
                 var executables = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
-                    Title = "Locate xdelta3.exe (required for standard xdelta/VCDIFF patches)",
+                    Title = OperatingSystem.IsLinux()
+                        ? "Locate xdelta3 (install the xdelta3 package if unavailable)"
+                        : "Locate xdelta3.exe (required for standard xdelta/VCDIFF patches)",
                     AllowMultiple = false,
-                    FileTypeFilter = [new FilePickerFileType("xdelta3 executable") { Patterns = ["xdelta3.exe", "*.exe"] }]
+                    FileTypeFilter = [new FilePickerFileType("xdelta3 executable")
+                    {
+                        Patterns = OperatingSystem.IsLinux() ? new[] { "*" } : new[] { "xdelta3.exe", "*.exe" }
+                    }]
                 });
                 if (executables.Count == 0) return;
                 xdelta = executables[0].Path.LocalPath;
