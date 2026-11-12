@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="White2UpgradeEditor.MainWindow"
-        Title="White 2 Upgrade Studio" Width="1480" Height="940"
+        Title="White 2 Upgrade Studio — White2Upgrade ROMs ONLY" Width="1480" Height="940"
         MinWidth="1120" MinHeight="720" WindowStartupLocation="CenterScreen">
   <Grid ColumnDefinitions="244,*" RowDefinitions="*">
     <Border Grid.Column="0" Background="#0E1520" BorderBrush="#202D40" BorderThickness="0,0,1,0" Padding="16">
@@ -16,7 +16,7 @@
         <StackPanel Grid.Row="3" Spacing="8">
           <Border Height="1" Background="#202D40" Margin="0,0,0,8"/>
           <TextBlock Text="WHITE 2 UPGRADE" FontSize="11" Foreground="#AAB5C7"/>
-          <TextBlock Text="Independent editor · alpha" FontSize="10" Foreground="#65748B"/>
+          <TextBlock Text="ONLY FOR WHITE 2 UPGRADE" FontSize="10" Foreground="#65748B"/>
           <Button x:Name="CheckUpdatesButton" Content="Check for updates" Margin="0,10,0,0"/>
         </StackPanel>
       </Grid>
@@ -26,10 +26,10 @@
         <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
           <StackPanel Spacing="2">
             <TextBlock x:Name="PageTitle" Text="Overview" FontSize="18" FontWeight="SemiBold"/>
-            <TextBlock x:Name="PageSubtitle" Text="Open a ROM or extracted dump to get started" FontSize="11" Foreground="#8492A8"/>
+            <TextBlock x:Name="PageSubtitle" Text="WHITE 2 UPGRADE ONLY · other ROMs not supported" FontSize="11" Foreground="#8492A8"/>
           </StackPanel>
           <Button Grid.Column="1" x:Name="OpenDumpButton" Content="Open dump" Margin="0,0,10,0"/>
-          <Button Grid.Column="2" x:Name="OpenRomButton" Content="Open .nds"/>
+          <Button Grid.Column="2" x:Name="OpenRomButton" Content="Open White2Upgrade .nds"/>
         </Grid>
       </Border>
       <ContentControl Grid.Row="1" x:Name="PageHost" Margin="24"/>
