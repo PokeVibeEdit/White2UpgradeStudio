@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="White2UpgradeEditor.MainWindow"
+        Title="White 2 Upgrade Studio" Width="1480" Height="940"
+        MinWidth="1120" MinHeight="720" WindowStartupLocation="CenterScreen">
+  <Grid ColumnDefinitions="244,*" RowDefinitions="*">
+    <Border Grid.Column="0" Background="#0E1520" BorderBrush="#202D40" BorderThickness="0,0,1,0" Padding="16">
+      <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <StackPanel Spacing="4" Margin="4,8,4,24">
+          <TextBlock Text="W2U" FontSize="12" FontWeight="Bold" Foreground="#7EA1FF"/>
+          <TextBlock Text="Upgrade Studio" FontSize="21" FontWeight="Bold" Foreground="#F4F7FC"/>
+          <TextBlock Text="GENERATION V · ROM TOOLKIT" FontSize="10" Foreground="#75839A"/>
+        </StackPanel>
+        <TextBlock Grid.Row="1" Text="WORKSPACE" FontSize="10" FontWeight="Bold" Foreground="#65748B" Margin="8,0,0,10"/>
+        <StackPanel Grid.Row="2" x:Name="Navigation" Spacing="4"/>
+        <StackPanel Grid.Row="3" Spacing="8">
+          <Border Height="1" Background="#202D40" Margin="0,0,0,8"/>
+          <TextBlock Text="WHITE 2 UPGRADE" FontSize="11" Foreground="#AAB5C7"/>
+          <TextBlock Text="Independent editor · v4 preview" FontSize="10" Foreground="#65748B"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+    <Grid Grid.Column="1" RowDefinitions="68,*,36">
+      <Border Grid.Row="0" Background="#0E1520" BorderBrush="#202D40" BorderThickness="0,0,0,1" Padding="24,0">
+        <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+          <StackPanel Spacing="2">
+            <TextBlock x:Name="PageTitle" Text="Overview" FontSize="18" FontWeight="SemiBold"/>
+            <TextBlock x:Name="PageSubtitle" Text="Open a ROM or extracted dump to get started" FontSize="11" Foreground="#8492A8"/>
+          </StackPanel>
+          <Button Grid.Column="1" x:Name="OpenDumpButton" Content="Open dump" Margin="0,0,10,0"/>
+          <Button Grid.Column="2" x:Name="OpenRomButton" Content="Open .nds"/>
+        </Grid>
+      </Border>
+      <ContentControl Grid.Row="1" x:Name="PageHost" Margin="24"/>
+      <Border Grid.Row="2" Background="#0E1520" BorderBrush="#202D40" BorderThickness="0,1,0,0" Padding="24,0">
+        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+          <TextBlock x:Name="StatusText" Text="Ready · No workspace loaded" FontSize="10" Foreground="#8492A8"/>
+          <Button Grid.Column="1" x:Name="SaveButton" Content="Save changes" Classes="primary" IsEnabled="False" Padding="16,5"/>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</Window>

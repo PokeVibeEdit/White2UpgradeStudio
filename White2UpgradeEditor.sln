@@ -1,0 +1,18 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "White2UpgradeEditor", "White2UpgradeEditor\White2UpgradeEditor.csproj", "{B0F8E96A-CA6D-4E5A-9D3A-11E2A7A7F9D1}"
+EndProject
+Global
+  GlobalSection(SolutionConfigurationPlatforms) = preSolution
+    Debug|Any CPU = Debug|Any CPU
+    Release|Any CPU = Release|Any CPU
+  EndGlobalSection
+  GlobalSection(ProjectConfigurationPlatforms) = postSolution
+    {B0F8E96A-CA6D-4E5A-9D3A-11E2A7A7F9D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {B0F8E96A-CA6D-4E5A-9D3A-11E2A7A7F9D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {B0F8E96A-CA6D-4E5A-9D3A-11E2A7A7F9D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {B0F8E96A-CA6D-4E5A-9D3A-11E2A7A7F9D1}.Release|Any CPU.Build.0 = Release|Any CPU
+  EndGlobalSection
+EndGlobal

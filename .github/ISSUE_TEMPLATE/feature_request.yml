@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest an editing feature or usability improvement
+labels: ['enhancement']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the expected UI or ROM editing workflow.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Technical references (optional)
+      description: Links to format documentation are welcome. Please don't attach ROMs or extracted proprietary assets.

@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a crash, compiler error, or incorrect edit
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not upload game ROMs, ROM dumps, save files, or proprietary assets. Please remove personal paths from logs.
+  - type: input
+    id: version
+    attributes:
+      label: Version or Git commit
+      placeholder: e.g. main branch, commit abc123
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Build or startup
+        - Pokémon editor
+        - Trainers
+        - Starter / rival editor
+        - Maps and events / 3D preview
+        - Sprites or palettes
+        - Save / patch / ROM files
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the editing mode (extracted dump or direct .nds) if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and error output
+      description: Paste the full stack trace or compiler error after removing personal information.
+      render: text
+    validations:
+      required: true

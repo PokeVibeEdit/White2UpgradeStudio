@@ -1,0 +1,50 @@
+# .NET / IDE
+**/bin/
+**/obj/
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.user
+*.suo
+*.rsuser
+TestResults/
+coverage/
+artifacts/
+publish/
+
+# Local ROMs, extracted ROM content and game assets
+*.nds
+*.srl
+*.dsi
+*.3ds
+*.cia
+*.7z
+*.rar
+*.zip
+*.bps
+*.ips
+*.xdelta
+*.xdelta3
+*.narc
+*.narc.tmp
+*.sav
+*.dsv
+*.bak
+*.backup
+/data/
+/dump/
+/dumps/
+/rom/
+/roms/
+/patches/
+/exports/
+/White2Upgrade dump/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.tmp
+*.log
