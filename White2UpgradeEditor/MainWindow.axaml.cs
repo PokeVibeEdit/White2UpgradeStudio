@@ -29,6 +29,7 @@ public sealed partial class MainWindow : Window
     private readonly TextBlock _subtitle;
     private readonly ContentControl _host;
     private readonly Button _save;
+    private readonly Button _exportXdelta;
 
     public MainWindow()
     {
@@ -38,6 +39,8 @@ public sealed partial class MainWindow : Window
         _subtitle = this.FindControl<TextBlock>("PageSubtitle")!;
         _host = this.FindControl<ContentControl>("PageHost")!;
         _save = this.FindControl<Button>("SaveButton")!;
+        _exportXdelta = this.FindControl<Button>("ExportXdeltaButton")!;
+        _exportXdelta.Click += async (_, _) => await ExportXdeltaAsync();
         this.FindControl<Button>("OpenDumpButton")!.Click += async (_, _) => await OpenDumpAsync();
         this.FindControl<Button>("OpenRomButton")!.Click += async (_, _) => await OpenRomAsync();
         _save.Click += async (_, _) => await SaveAsync();
@@ -574,14 +577,77 @@ public sealed partial class MainWindow : Window
 
     private async Task OpenDumpAsync()
     {
-        try{var folders=await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions{Title="Select extracted White 2 Upgrade dump",AllowMultiple=false});if(folders.Count==0)return;_workspace=RomWorkspace.OpenFolder(folders[0].Path.LocalPath);_save.IsEnabled=true;SetStatus(_workspace.Description+" · Save As writes only changed archives to a patch folder.");ShowPage("Overview");}
+        try{var folders=await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions{Title="Select extracted White 2 Upgrade dump",AllowMultiple=false});if(folders.Count==0)return;_workspace=RomWorkspace.OpenFolder(folders[0].Path.LocalPath);_save.IsEnabled=true;_exportXdelta.IsEnabled=true;SetStatus(_workspace.Description+" · Save As writes only changed archives to a patch folder.");ShowPage("Overview");}
         catch(Exception ex){SetStatus("Could not open dump: "+ex.Message);}
     }
     private async Task OpenRomAsync()
     {
-        try{var files=await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions{Title="Open Nintendo DS ROM",AllowMultiple=false,FileTypeFilter=[new FilePickerFileType("Nintendo DS ROM"){Patterns=["*.nds"]}]});if(files.Count==0)return;_workspace=RomWorkspace.OpenRom(files[0].Path.LocalPath);_save.IsEnabled=true;SetStatus(_workspace.Description+" · Direct ROM save requires same-size archive replacements.");ShowPage("Overview");}
+        try{var files=await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions{Title="Open Nintendo DS ROM",AllowMultiple=false,FileTypeFilter=[new FilePickerFileType("Nintendo DS ROM"){Patterns=["*.nds"]}]});if(files.Count==0)return;_workspace=RomWorkspace.OpenRom(files[0].Path.LocalPath);_save.IsEnabled=true;_exportXdelta.IsEnabled=true;SetStatus(_workspace.Description+" · Direct ROM save requires same-size archive replacements.");ShowPage("Overview");}
         catch(Exception ex){SetStatus("Could not open ROM: "+ex.Message);}
     }
+    private async Task ExportXdeltaAsync()
+    {
+        if (_workspace is null) return;
+        if (_workspace.DirtyArchiveCount == 0)
+        {
+            SetStatus("No unsaved archive changes. Apply an edit before exporting an xdelta patch.");
+            return;
+        }
+
+        _exportXdelta.IsEnabled = false;
+        try
+        {
+            string? sourceRom = _workspace.OpenedRomPath;
+            if (sourceRom is null)
+            {
+                var sources = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                {
+                    Title = "Choose the original .nds ROM matching your extracted dump",
+                    AllowMultiple = false,
+                    FileTypeFilter = [new FilePickerFileType("Nintendo DS ROM") { Patterns = ["*.nds"] }]
+                });
+                if (sources.Count == 0) return;
+                sourceRom = sources[0].Path.LocalPath;
+            }
+
+            string? xdelta = XdeltaPatchExporter.FindExecutable();
+            if (xdelta is null)
+            {
+                var executables = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                {
+                    Title = "Locate xdelta3.exe (required for standard xdelta/VCDIFF patches)",
+                    AllowMultiple = false,
+                    FileTypeFilter = [new FilePickerFileType("xdelta3 executable") { Patterns = ["xdelta3.exe", "*.exe"] }]
+                });
+                if (executables.Count == 0) return;
+                xdelta = executables[0].Path.LocalPath;
+            }
+
+            var patchFile = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Export xdelta patch (contains differences only)",
+                SuggestedFileName = "White2Upgrade-changes.xdelta",
+                DefaultExtension = "xdelta",
+                FileTypeChoices = [new FilePickerFileType("xdelta patch") { Patterns = ["*.xdelta", "*.vcdiff"] }]
+            });
+            if (patchFile is null) return;
+
+            SetStatus("Creating and verifying xdelta patch; the original ROM will not be modified...");
+            await XdeltaPatchExporter.ExportAsync(_workspace, sourceRom,
+                patchFile.Path.LocalPath, xdelta);
+            SetStatus("Verified xdelta patch saved to " + patchFile.Path.LocalPath +
+                      ". Apply it to the same original ROM revision.");
+        }
+        catch (Exception ex)
+        {
+            SetStatus("xdelta export failed: " + ex.Message);
+        }
+        finally
+        {
+            _exportXdelta.IsEnabled = _workspace is not null;
+        }
+    }
+
     private async Task SaveAsync()
     {
         if(_workspace==null)return;try{
