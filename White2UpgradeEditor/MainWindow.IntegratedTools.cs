@@ -167,6 +167,40 @@ public sealed partial class MainWindow
             catch (Exception ex) { SetStatus("Type chart check failed: " + ex.Message); }
         };
         options.Children.Add(retry);
+        var exportReport = new Button { Content = "Export diagnostic report" };
+        exportReport.Click += async (_, _) =>
+        {
+            try
+            {
+                var target = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+                {
+                    Title = "Save White 2 Upgrade type chart diagnostic report",
+                    SuggestedFileName = "White2Upgrade-typechart-report.txt",
+                    DefaultExtension = "txt",
+                    FileTypeChoices = [new FilePickerFileType("Text report") { Patterns = ["*.txt"] }]
+                });
+                if (target is null) return;
+                var report = new StringBuilder();
+                report.AppendLine("WHITE 2 UPGRADE — TYPE CHART INSPECTOR");
+                report.AppendLine(inspection.Detail);
+                report.AppendLine($"Verified White 2 Upgrade: {inspection.White2UpgradeVerified}");
+                report.AppendLine($"Chart dimensions: {inspection.Dimensions}×{inspection.Dimensions}");
+                if (inspection.Matrix is { } entries)
+                {
+                    for (int i = 0; i < inspection.Dimensions; i++)
+                    {
+                        report.Append(TypeChartEngine.Types[i]).Append(" attacking: ");
+                        report.AppendLine(string.Join(", ", Enumerable.Range(0, inspection.Dimensions)
+                            .Select(j => TypeChartEngine.Types[j] + "=" +
+                                TypeChartEngine.Multiplier(entries[i * inspection.Dimensions + j]))));
+                    }
+                }
+                File.WriteAllText(target.Path.LocalPath, report.ToString());
+                SetStatus("Type chart report saved to " + target.Path.LocalPath);
+            }
+            catch (Exception ex) { SetStatus("Could not export chart report: " + ex.Message); }
+        };
+        options.Children.Add(exportReport);
         if (inspection.CanRepair)
         {
             var fix = PrimaryButton("Fix to 18×18 (ask first)", async () =>
