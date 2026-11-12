@@ -1,0 +1,50 @@
+name: Linux AppImage build
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-appimage:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install Linux build and headless UI dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y librsvg2-bin xvfb libx11-6 libxrandr2 libxi6 libgl1 libfontconfig1 libfreetype6
+
+      - name: Build AppImage
+        shell: bash
+        run: bash scripts/build-appimage.sh "0.0.0-dev"
+
+      - name: Smoke-test AppImage launch under Xvfb
+        shell: bash
+        run: |
+          set +e
+          xvfb-run -a timeout 12s env APPIMAGE_EXTRACT_AND_RUN=1 ./dist/White2UpgradeStudio-v0.0.0-dev-x86_64.AppImage > /tmp/w2u-appimage-smoke.log 2>&1
+          rc=$?
+          set -e
+          cat /tmp/w2u-appimage-smoke.log
+          # Exit code 124 means the GUI stayed running until deliberately stopped.
+          if [ "$rc" -ne 124 ]; then
+            echo "AppImage terminated unexpectedly (exit code $rc)"
+            exit 1
+          fi
+
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: White2UpgradeStudio-linux-x86_64-AppImage
+          path: dist/*.AppImage
+          if-no-files-found: error
