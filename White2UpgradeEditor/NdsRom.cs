@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
+using System.Security.Cryptography;
 
 namespace White2UpgradeEditor;
 
@@ -11,6 +12,7 @@ public sealed record RomFile(int Id, string Path, int Start, int End)
 public sealed class NdsRom
 {
     private byte[] _data = [];
+    private byte[] _sourceSha256 = [];
     public string FilePath { get; private set; } = "";
     public string Title => _data.Length >= 12 ? Encoding.ASCII.GetString(_data, 0, 12).TrimEnd('\0', ' ') : "";
     public IReadOnlyList<RomFile> Files { get; private set; } = [];
@@ -45,7 +47,8 @@ public sealed class NdsRom
                 ranges[i].start, ranges[i].end));
 
         _data = data;
-        FilePath = path;
+        _sourceSha256 = SHA256.HashData(data);
+        FilePath = Path.GetFullPath(path);
         Files = list;
     }
 
@@ -70,6 +73,18 @@ public sealed class NdsRom
     }
 
     public void SaveAs(string path) => File.WriteAllBytes(path, _data);
+
+    /// <summary>
+    /// Reject xdelta export if the original .nds has changed on disk since it was opened.
+    /// The editor's working image may have changed in memory; that is expected.
+    /// </summary>
+    public bool OriginalFileMatchesDisk()
+    {
+        if (string.IsNullOrWhiteSpace(FilePath) || !File.Exists(FilePath)) return false;
+        using var source = File.OpenRead(FilePath);
+        return source.Length == _data.LongLength
+               && SHA256.HashData(source).AsSpan().SequenceEqual(_sourceSha256);
+    }
 
     private static Dictionary<int, string> ParseNames(byte[] data, int fnt, int fntSize, int fileCount)
     {
