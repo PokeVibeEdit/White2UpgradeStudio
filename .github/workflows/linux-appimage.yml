@@ -24,6 +24,9 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y librsvg2-bin xvfb libx11-6 libxrandr2 libxi6 libgl1 libfontconfig1 libfreetype6
 
+      - name: Verify integrated starter-menu backend
+        run: python3 Tools/starter_menu_sync.py --self-test
+
       - name: Build AppImage
         shell: bash
         run: bash scripts/build-appimage.sh "0.0.0-dev"

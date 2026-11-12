@@ -9,6 +9,7 @@ public sealed class RomWorkspace
     private readonly Dictionary<string, RomFile> _romFiles = new(StringComparer.OrdinalIgnoreCase);
 
     public bool IsExtractedFolder => _folderRoot is not null;
+    public string? SourceFolderPath => _folderRoot;
     public string Description { get; }
 
     private RomWorkspace(string root, bool hasDataPrefix)

@@ -15,4 +15,8 @@
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.9" />
     <PackageReference Include="SkiaSharp" Version="2.88.9" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="../Tools/starter_menu_sync.py" Link="Tools/starter_menu_sync.py"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+  </ItemGroup>
 </Project>
