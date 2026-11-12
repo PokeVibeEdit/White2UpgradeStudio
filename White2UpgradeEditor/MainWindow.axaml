@@ -34,9 +34,10 @@
       </Border>
       <ContentControl Grid.Row="1" x:Name="PageHost" Margin="24"/>
       <Border Grid.Row="2" Background="#0E1520" BorderBrush="#202D40" BorderThickness="0,1,0,0" Padding="24,0">
-        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
           <TextBlock x:Name="StatusText" Text="Ready · No workspace loaded" FontSize="10" Foreground="#8492A8"/>
-          <Button Grid.Column="1" x:Name="SaveButton" Content="Save changes" Classes="primary" IsEnabled="False" Padding="16,5"/>
+          <Button Grid.Column="1" x:Name="ExportXdeltaButton" Content="Export xdelta patch" IsEnabled="False" Margin="0,0,10,0" Padding="16,5"/>
+          <Button Grid.Column="2" x:Name="SaveButton" Content="Save changes" Classes="primary" IsEnabled="False" Padding="16,5"/>
         </Grid>
       </Border>
     </Grid>
