@@ -16,7 +16,7 @@ A desktop ROM editor for **Pokémon White 2 Upgrade**, written in **C# / .NET 8*
 | **Maps + Events** | Edit existing NPC/sign/warp/trigger records; experimental 3D event positioning viewer and read-only NSBMD-style geometry wireframe preview |
 | **Misc sprites** | Raw NARC resource browser with size-checked import/export (not a visual overworld sprite editor) |
 | **ROM files** | NitroFS browser with a hexadecimal preview |
-| **xdelta export** | Export verified xdelta/VCDIFF patches for edited .nds ROMs or matching extracted dumps (requires external xdelta3.exe) |
+| **xdelta export** | Export verified xdelta/VCDIFF patches for edited .nds ROMs or matching extracted dumps (requires xdelta3) |
 
 ### Not yet supported
 
@@ -122,13 +122,13 @@ Instead of distributing a copyrighted edited ROM, you can export a standard **xd
 
 1. Open an original **.nds** file and edit its resources, or open a dump extracted from the ROM you intend to patch.
 2. Click **Export xdelta patch** next to **Save changes**. From an extracted dump, choose the corresponding untouched original `.nds` first.
-3. The first time, select a trusted copy of **xdelta3.exe** if it isn't next to the editor or available on your `PATH`.
+3. Install **xdelta3** using your Linux package manager (for example `sudo apt install xdelta3` on Ubuntu/Debian), or select a trusted **xdelta3.exe** on Windows if the editor cannot find it on `PATH`.
 4. Choose a `.xdelta` output path. The editor builds a temporary modified ROM, runs xdelta3, then decodes the patch and checks that it exactly recreates the edited ROM before saving the patch.
 
 The xdelta3 program is **not bundled** with this repository or releases. Obtain it independently from a trusted source. For example, the xdelta3 command line can apply a patch with:
 
 ```powershell
-xdelta3.exe -d -s .\original.nds .\White2Upgrade-changes.xdelta .\patched.nds
+xdelta3 -d -s .\original.nds .\White2Upgrade-changes.xdelta .\patched.nds
 ```
 
 **Compatibility and safety:**
