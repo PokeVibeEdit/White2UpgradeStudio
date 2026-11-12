@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Reflection;
 using System.Globalization;
 using System.Text;
 using Avalonia;
@@ -39,8 +41,35 @@ public sealed partial class MainWindow : Window
         this.FindControl<Button>("OpenDumpButton")!.Click += async (_, _) => await OpenDumpAsync();
         this.FindControl<Button>("OpenRomButton")!.Click += async (_, _) => await OpenRomAsync();
         _save.Click += async (_, _) => await SaveAsync();
+        this.FindControl<Button>("CheckUpdatesButton")!.Click += (_, _) => OpenUpdater();
         BuildNavigation();
         ShowPage("Overview");
+    }
+
+    private void OpenUpdater()
+    {
+        // The separate updater never forces the editor closed: users can save their work first.
+        var executable = Path.Combine(AppContext.BaseDirectory, "White2UpgradeUpdater.exe");
+        if (!File.Exists(executable))
+        {
+            SetStatus("Updater not found. Download a full release package containing White2UpgradeUpdater.exe.");
+            return;
+        }
+        try
+        {
+            var info = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            var version = (info ?? "0.1.0-alpha.1").Split('+')[0];
+            var start = new ProcessStartInfo(executable) { UseShellExecute = true, WorkingDirectory = AppContext.BaseDirectory };
+            start.ArgumentList.Add("--install-dir");
+            start.ArgumentList.Add(AppContext.BaseDirectory);
+            start.ArgumentList.Add("--current-version");
+            start.ArgumentList.Add(version);
+            start.ArgumentList.Add("--editor-pid");
+            start.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+            Process.Start(start);
+            SetStatus("Updater opened. Save and close the editor only if you choose to install an update.");
+        }
+        catch (Exception ex) { SetStatus("Couldn't launch updater: " + ex.Message); }
     }
 
     private void InitializeComponent() => Avalonia.Markup.Xaml.AvaloniaXamlLoader.Load(this);

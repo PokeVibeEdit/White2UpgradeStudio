@@ -27,8 +27,14 @@ jobs:
       - name: Build (Release)
         run: dotnet build .\White2UpgradeEditor.sln -c Release --no-restore
 
-      - name: Publish Windows x64 app
-        run: dotnet publish .\White2UpgradeEditor\White2UpgradeEditor.csproj -c Release -r win-x64 --self-contained false -o .\publish\White2UpgradeStudio
+      - name: Updater self-tests
+        run: dotnet run --project .\White2UpgradeUpdater\White2UpgradeUpdater.csproj -c Release --no-build -- --self-test
+
+      - name: Publish Windows x64 editor and updater
+        shell: pwsh
+        run: |
+          dotnet publish .\White2UpgradeEditor\White2UpgradeEditor.csproj -c Release -r win-x64 --self-contained false -o .\publish\White2UpgradeStudio
+          dotnet publish .\White2UpgradeUpdater\White2UpgradeUpdater.csproj -c Release -r win-x64 --self-contained false -o .\publish\White2UpgradeStudio
 
       - name: Upload app artifact
         uses: actions/upload-artifact@v4
